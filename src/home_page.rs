@@ -54,6 +54,41 @@ pub fn HomePage(cx: Scope) -> impl IntoView {
             on_cleanup(cx, move || {
                 handle.clear();
             });
+
+            use wasm_bindgen::prelude::*;
+
+            let ws = web_sys::WebSocket::new("ws://localhost:3000/ws/").unwrap();
+            let cloned_ws = ws.clone();
+
+            let onmessage_callback = Closure::<dyn FnMut(_)>::new(move |e: web_sys::MessageEvent| {
+                if let Ok(str) = e.data().dyn_into::<js_sys::JsString>() {
+                    log!("Recieved String: \"{}\"", str);
+                } else {
+                    log!("Received Unknown: {:?}", e.data());
+                }
+            });
+
+            let onerror_callback = Closure::<dyn FnMut(_)>::new(move |e: web_sys::ErrorEvent| {
+                log!("error event: {:?}", e);
+            });
+
+            let send_thing = move || {
+                let _ = cloned_ws.send_with_str("");
+            };
+
+            let onopen_callback = Closure::<dyn FnMut()>::new(move || {
+                log!("socket opened");
+            });
+
+            ws.set_onerror(Some(onerror_callback.as_ref().unchecked_ref()));
+            ws.set_onmessage(Some(onmessage_callback.as_ref().unchecked_ref()));
+            ws.set_onopen(Some(onopen_callback.as_ref().unchecked_ref()));
+
+            onerror_callback.forget();
+            onmessage_callback.forget();
+            onopen_callback.forget();
+        } else {
+            let send_thing = || {};
         }
     }
 
@@ -77,6 +112,7 @@ pub fn HomePage(cx: Scope) -> impl IntoView {
             </div>
             <div class=move || { if running() { "clicky red" } else { "clicky" } }
                 on:click=move |_| {
+                    send_thing();
                     if running() {
                         let now = get_now();
                         let elapsed = now - start_time();

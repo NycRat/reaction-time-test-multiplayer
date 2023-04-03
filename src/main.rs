@@ -5,26 +5,9 @@ async fn main() -> std::io::Result<()> {
     use actix_web::*;
     use leptos::*;
     use leptos_actix::{generate_route_list, LeptosRoutes};
-    use reaction_time_test_multiplayer::app::*;
+    use reaction_time_test_multiplayer::{app::*, *, server_functions::websocket};
 
-    // leptos_ssr::app::register_server_functions();
-
-    // #[get("/api/events")]
-    // async fn events() -> impl Responder {
-    //     use futures::StreamExt;
-
-    //     let stream =
-    //         futures::stream::once(async { leptos_ssr::app::get_something().await.unwrap_or(-1) })
-    //             .chain(COUNT_CHANNEL.clone())
-    //             .map(|value| {
-    //                 Ok(web::Bytes::from(format!(
-    //                     "event: change\ndata: {value}\n\n"
-    //                 ))) as Result<web::Bytes>
-    //             });
-    //     HttpResponse::Ok()
-    //         .insert_header(("Content-Type", "text/event-stream"))
-    //         .streaming(stream)
-    // }
+    server_functions::register_server_functions();
 
     let conf = get_configuration(None).await.unwrap();
     let addr = conf.leptos_options.site_addr;
@@ -37,6 +20,7 @@ async fn main() -> std::io::Result<()> {
 
         App::new()
             .route("/api/{tail:.*}", leptos_actix::handle_server_fns())
+            .route("/ws/", web::get().to(websocket))
             .leptos_routes(
                 leptos_options.to_owned(),
                 routes.to_owned(),
